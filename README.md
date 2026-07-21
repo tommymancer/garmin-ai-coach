@@ -7,9 +7,9 @@ and is built around **losing weight** rather than race performance.
 Self-hosted. Your Garmin credentials and your API key never leave your machine.
 
 ```
-🚴 Collina d'Oro · 78min · load 207 (TEMPO) · 858 kcal
+🚴 Morning ride · 78min · load 207 (TEMPO) · 858 kcal
 📊 Week: acute load 507 · ACWR 2.41 🔴 overload · bike 69% / swim 9% / run 22%
-⚖️ 97.2 kg (+0.8 vs ~3 weeks) · body fat 17.9%
+⚖️ 84.0 kg (+0.8 vs ~3 weeks) · body fat 18.0%
 💡 Weight is up and load is off the scale — the problem here is recovery, not effort.
 🏋️ Next: easy only — 30min recovery swim, or 40min zone 2 run (HR <129)
 ```
