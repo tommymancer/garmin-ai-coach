@@ -83,7 +83,7 @@ You need: Python 3.10+, a Garmin account, a Telegram account, and an
 **1. Clone and install**
 
 ```bash
-git clone https://github.com/YOURNAME/garmin-ai-coach.git
+git clone https://github.com/tommymancer/garmin-ai-coach.git
 cd garmin-ai-coach
 python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 ```
