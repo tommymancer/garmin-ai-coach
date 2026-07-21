@@ -1,0 +1,12 @@
+[Unit]
+Description=Garmin AI Coach - Telegram chat daemon
+After=network-online.target
+
+[Service]
+WorkingDirectory=/path/to/garmin-ai-coach
+ExecStart=/path/to/garmin-ai-coach/.venv/bin/python -m coach.chat
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

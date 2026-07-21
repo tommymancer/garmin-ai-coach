@@ -1,0 +1,8 @@
+[Unit]
+Description=Garmin AI Coach - activity feedback
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/path/to/garmin-ai-coach
+ExecStart=/path/to/garmin-ai-coach/.venv/bin/python -m coach.feedback

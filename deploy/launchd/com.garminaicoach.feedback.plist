@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.garminaicoach.feedback</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <!-- EDIT THIS PATH -->
+        <string>cd /path/to/garmin-ai-coach &amp;&amp; ./.venv/bin/python -m coach.feedback</string>
+    </array>
+    <key>StartInterval</key><integer>900</integer>
+    <key>RunAtLoad</key><true/>
+    <key>StandardOutPath</key><string>/tmp/garmin-ai-coach-feedback.log</string>
+    <key>StandardErrorPath</key><string>/tmp/garmin-ai-coach-feedback.log</string>
+</dict>
+</plist>

@@ -1,0 +1,13 @@
+.env
+*.pyc
+__pycache__/
+.venv/
+venv/
+*.log
+garmin_tokens/
+state.json
+chat_offset.json
+chat_history_*.json
+coach_profile.md
+coach_plan.md
+images/
