@@ -80,6 +80,34 @@ because it's magic.
 You need: Python 3.10+, a Garmin account, a Telegram account, and an
 [Anthropic API key](https://console.anthropic.com).
 
+### Easiest: let an AI walk you through it
+
+Not comfortable in a terminal? Paste this into
+[Claude.ai](https://claude.ai) or ChatGPT and it will guide you step by step:
+
+> I want to install the garmin-ai-coach project on my computer. Please read
+> https://raw.githubusercontent.com/tommymancer/garmin-ai-coach/main/AGENTS.md
+> and walk me through the setup one step at a time, asking me what I need as we go.
+> I'm on **macOS** *(or Linux / Windows — say which)*.
+
+The assistant guides you; you run the commands. **It will never ask for your
+Garmin password or API key in the chat** — those are typed straight into the
+installer on your own machine.
+
+### Or run the installer yourself
+
+```bash
+git clone https://github.com/tommymancer/garmin-ai-coach.git
+cd garmin-ai-coach
+python3 setup.py
+```
+
+The installer creates the virtual environment, installs dependencies, asks for
+your credentials (typed locally, hidden), finds your Telegram chat ID, and
+records a baseline. Then skip to step 5.
+
+### Or do it by hand
+
 **1. Clone and install**
 
 ```bash
