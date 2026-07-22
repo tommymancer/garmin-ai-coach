@@ -34,6 +34,30 @@ console.anthropic.com, and regenerate the bot token via @BotFather.
 4. **A Claude API key** — https://console.anthropic.com → API keys → Create.
    This is pay-as-you-go, roughly $1–6/month depending on the model.
 
+## Shortcut: if the user has Docker
+
+Ask early whether they have Docker installed (`docker --version`). If they do,
+the whole thing is three commands and you can skip the venv/installer steps:
+
+```bash
+git clone https://github.com/tommymancer/garmin-ai-coach.git
+cd garmin-ai-coach
+cp .env.example .env
+```
+
+Then help them fill in `.env` (open it in a text editor — the values go in the
+file on their machine, NOT in this chat), and:
+
+```bash
+docker compose up -d
+docker compose logs -f
+```
+
+They still need the Telegram bot (Step 2) and their chat ID. To find the chat ID
+without the installer: after messaging the bot, run
+`docker compose run --rm coach python -m tools.whoami`. If they don't have
+Docker, or prefer not to use it, continue with the steps below.
+
 ## Step 1 — get the code
 
 macOS / Linux:

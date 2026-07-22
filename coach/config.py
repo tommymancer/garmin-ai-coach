@@ -71,6 +71,11 @@ class Config:
         return int(os.environ.get("COACH_SNAPSHOT_TTL", "600"))
 
     @property
+    def feedback_interval(self) -> int:
+        """Seconds between activity checks when running the combined process."""
+        return int(os.environ.get("COACH_FEEDBACK_INTERVAL", "900"))
+
+    @property
     def history_turns(self) -> int:
         return int(os.environ.get("COACH_HISTORY_TURNS", "8"))
 

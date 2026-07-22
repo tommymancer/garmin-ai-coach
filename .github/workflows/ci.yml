@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Unit tests (load model)
+        run: python tests/test_load_model.py
+      - name: Import check (container entrypoint)
+        run: python -c "import coach.run"
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t garmin-ai-coach:ci .
+      - name: Container entrypoint starts and reads config
+        # No secrets in CI: the process must start, then exit when it finds no
+        # config. That proves the image built and the entrypoint is wired up.
+        # (Which required setting appears first is a thread race, so match loosely.)
+        run: |
+          set +e
+          out=$(docker run --rm garmin-ai-coach:ci 2>&1)
+          echo "$out"
+          echo "$out" | grep -q "Missing required setting" \
+            && echo "OK: entrypoint ran and reached config validation" \
+            || { echo "FAIL: unexpected startup output"; exit 1; }

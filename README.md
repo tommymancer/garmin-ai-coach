@@ -77,10 +77,25 @@ because it's magic.
 
 ## Setup
 
-You need: Python 3.10+, a Garmin account, a Telegram account, and an
-[Anthropic API key](https://console.anthropic.com).
+You need: a Garmin account, a Telegram account, and an
+[Anthropic API key](https://console.anthropic.com). Python 3.10+ too, unless you
+use Docker.
 
-### Easiest: let an AI walk you through it
+### Fastest: Docker (one command, nothing to keep alive)
+
+```bash
+git clone https://github.com/tommymancer/garmin-ai-coach.git
+cd garmin-ai-coach
+cp .env.example .env      # edit .env with your details
+docker compose up -d
+```
+
+Both the feedback loop and the chat daemon run in one container that restarts
+itself. No Python install, no background-service setup. Prefer not to own a
+machine at all? [DEPLOY.md](DEPLOY.md) has one-command deploys to Fly.io,
+Railway and Render.
+
+### Easiest for non-technical users: let an AI walk you through it
 
 Not comfortable in a terminal? Paste this into
 [Claude.ai](https://claude.ai) or ChatGPT and it will guide you step by step:

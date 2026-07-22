@@ -1,0 +1,18 @@
+# Fly.io deploy. See DEPLOY.md for the full walkthrough.
+# Secrets are set with `fly secrets set`, never committed.
+app = "garmin-ai-coach"
+primary_region = "iad"
+
+[build]
+
+[env]
+  COACH_DATA_DIR = "/data"
+
+[mounts]
+  source = "coach_data"
+  destination = "/data"
+
+# Always-on, single instance (the chat daemon must stay running).
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
