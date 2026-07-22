@@ -1,5 +1,8 @@
 # Garmin AI Coach
 
+[![CI](https://github.com/tommymancer/garmin-ai-coach/actions/workflows/ci.yml/badge.svg)](https://github.com/tommymancer/garmin-ai-coach/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 An AI coach that messages you on Telegram **the moment you upload a workout**,
 tracks your training load **across cycling, swimming and running as one number**,
 and is built around **losing weight** rather than race performance.
