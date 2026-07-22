@@ -4,37 +4,32 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 An AI coach that messages you on Telegram **the moment you upload a workout**,
-tracks your training load **across cycling, swimming and running as one number**,
-and is built around **losing weight** rather than race performance.
+turns your Garmin data into a **flexible multisport plan**, and answers when you
+argue with it. Built around **losing weight**, not race performance.
 
 Self-hosted. Your Garmin credentials and your API key never leave your machine.
 
-```
-🚴 Morning ride · 78min · load 207 (TEMPO) · 858 kcal
-📊 Week: acute load 507 · ACWR 2.41 🔴 overload · bike 69% / swim 9% / run 22%
-⚖️ 84.0 kg (+0.8 vs ~3 weeks) · body fat 18.0%
-💡 Weight is up and load is off the scale — the problem here is recovery, not effort.
-🏋️ Next: easy only — 30min recovery swim, or 40min zone 2 run (HR <129)
-```
+![Example conversation with the coach](docs/example.png)
 
-You can also just talk to it:
-
-> **You:** how did this week go?
-> **You:** what should I do tomorrow?
-> **You:** *[photo of your lunch]* how many calories is this?
+*Rendering of real output — the numbers and phrasing are what the coach actually produces.*
 
 ---
 
 ## Why this exists
 
-Garmin's own training plans are good, but they're **single-sport**. If you
-rotate between bike, swim and run, nothing tells you what your *combined* load
-is doing — so you can be fresh according to the run plan and cooked in reality.
+**Garmin Connect already gives you a combined training load across sports**, and
+it does that well. The gaps this fills are elsewhere:
 
-And almost every training app optimizes for **performance**. If your actual goal
-is fat loss, you want different advice: sustainable aerobic volume, weekly
-calorie expenditure, consistency — and an honest word when the training is fine
-but the scale isn't moving.
+- **No multisport plan.** Garmin Coach is single-sport. It won't build you a
+  week that balances bike, swim and run — and it won't reshuffle that week when
+  you skip Saturday's long ride.
+- **Nothing to talk to.** You can read the numbers, but you can't ask *"should I
+  still do the long ride tomorrow?"* and get an answer that weighs your plan,
+  your current load, and the fact that you just said you feel fine.
+- **Aimed at performance, not fat loss.** If your goal is losing weight you want
+  different advice: sustainable aerobic volume, weekly calorie expenditure,
+  consistency — and someone willing to say the training is fine and the problem
+  is your diet.
 
 ## How it works
 
