@@ -67,8 +67,12 @@ class Config:
 
     @property
     def snapshot_ttl(self) -> int:
-        """Seconds to cache Garmin data in the chat daemon (avoids rate limits)."""
-        return int(os.environ.get("COACH_SNAPSHOT_TTL", "600"))
+        """Seconds to cache Garmin data in the chat daemon. Short on purpose:
+        `get_activities` is a cheap read that does NOT re-login, so it isn't a
+        rate-limit (429) risk — that comes from repeated logins. A long cache
+        only makes the chat answer on stale data right after you upload a
+        workout, which is exactly when you ask about it. Just coalesces bursts."""
+        return int(os.environ.get("COACH_SNAPSHOT_TTL", "120"))
 
     @property
     def feedback_interval(self) -> int:

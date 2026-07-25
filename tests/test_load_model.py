@@ -13,8 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from coach.load_model import (acwr_status, compute_metrics, ewma_acwr,  # noqa: E402
-                              is_hard, sport_bucket)
+from coach.load_model import (_weight_trend, acwr_status, compute_metrics,  # noqa: E402
+                              ewma_acwr, is_hard, sport_bucket)
 
 NOW = datetime(2026, 6, 15, 12, 0, 0)
 
@@ -112,6 +112,41 @@ def test_diet_alert_only_fires_when_training_is_good_and_weight_stalls():
     assert metrics["training_ok"] is True
     assert metrics["diet_alert"] is True, "weight up + training fine => nutrition is the lever"
     assert metrics["losing_too_fast"] is False
+
+
+# Real weigh-in pattern that produced the bug: essentially flat around
+# 96-97 kg, with one 98.0 kg outlier ~30 days back. (days-ago, kg)
+_REAL_WEIGHINS = [
+    (33, 96.4), (30, 98.0), (24, 96.7), (23, 96.6), (12, 97.2), (10, 97.0),
+    (7, 96.9), (6, 97.0), (5, 97.1), (4, 96.2), (3, 96.3), (1, 95.7),
+]
+
+
+def _real_weighins():
+    return [{"calendarDate": (NOW - timedelta(days=d)).strftime("%Y-%m-%d"),
+             "weight": kg * 1000} for d, kg in _REAL_WEIGHINS]
+
+
+def test_weight_trend_is_robust_to_a_single_outlier():
+    # Weight is basically flat here; the 98.0 outlier must not make the trend
+    # read as a big loss (the bug reported -1.7 kg on one day).
+    t = _weight_trend(_real_weighins(), NOW)
+    assert abs(t["delta_kg"]) < 1.5, (
+        f"a single outlier weigh-in must not dominate the 30-day trend; "
+        f"got delta {t['delta_kg']} kg"
+    )
+
+
+def test_weight_trend_has_no_day_to_day_whiplash():
+    # A real trend may drift slowly (even cross zero); what it must NOT do is
+    # jump around — the bug swung -1.7 -> +0.7 (a ~2.4 kg lurch) between days.
+    weighins = _real_weighins()
+    deltas = [_weight_trend(weighins, NOW - timedelta(days=b))["delta_kg"]
+              for b in range(0, 6)]
+    jumps = [abs(deltas[i] - deltas[i + 1]) for i in range(len(deltas) - 1)]
+    assert max(jumps) < 1.0, (
+        f"day-to-day trend change should be small; got deltas {deltas}"
+    )
 
 
 def test_losing_too_fast_flags_rapid_drop():

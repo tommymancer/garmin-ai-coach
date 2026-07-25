@@ -164,8 +164,37 @@ def _sport_split(activities):
     return {k: round(v / total * 100) for k, v in by_sport.items()}
 
 
-def _weight_trend(weighins, now):
-    """weighins: Garmin dateWeightList entries (weight in grams)."""
+def _median(values):
+    ordered = sorted(values)
+    n = len(ordered)
+    mid = n // 2
+    return ordered[mid] if n % 2 else (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def _theil_sen(xs, ys):
+    """Robust slope+intercept: median of pairwise slopes. A single outlier
+    weigh-in can't drag the trend, unlike least squares or a single reference."""
+    slopes = [
+        (ys[j] - ys[i]) / (xs[j] - xs[i])
+        for i in range(len(xs)) for j in range(i + 1, len(xs))
+        if xs[j] != xs[i]
+    ]
+    if not slopes:
+        return None, None
+    slope = _median(slopes)
+    intercept = _median([y - slope * x for x, y in zip(xs, ys)])
+    return slope, intercept
+
+
+def _weight_trend(weighins, now, trend_days=35, horizon_days=28):
+    """
+    Weight/body-fat trend from a robust fit over the last `trend_days`.
+
+    A single outlier reading (e.g. a 98.0 among 96.x neighbours) used to flip
+    the reported change from -1.7 kg to +0.7 kg depending on which day it was
+    picked as the "30 days ago" reference. Theil-Sen regression removes that:
+    it reports the underlying trend, not two noisy scale readings subtracted.
+    """
     points = []
     for entry in weighins or []:
         date_raw, weight_g = entry.get("calendarDate"), entry.get("weight")
@@ -180,17 +209,11 @@ def _weight_trend(weighins, now):
     if not points:
         return None
 
-    latest_day, latest_kg, latest_fat, latest_bmi = points[-1]
-    target = now - timedelta(days=30)
-    reference = None
-    for point in points[:-1]:
-        age = (now - point[0]).days
-        if 18 <= age <= 45:
-            if reference is None or abs((point[0] - target).days) < abs((reference[0] - target).days):
-                reference = point
+    _, latest_kg_raw, latest_fat, latest_bmi = points[-1]
+    window = [(p[0], p[1]) for p in points if 0 <= (now - p[0]).days <= trend_days]
 
     trend = {
-        "latest_kg": round(latest_kg, 1),
+        "latest_kg": round(latest_kg_raw, 1),
         "latest_body_fat_pct": round(latest_fat, 1) if latest_fat is not None else None,
         "latest_bmi": round(latest_bmi, 1) if latest_bmi is not None else None,
         "weighins_last_28d": sum(1 for p in points if (now - p[0]).days <= 28),
@@ -198,12 +221,21 @@ def _weight_trend(weighins, now):
         "rate_pct_per_week": None,
         "reference_days_ago": None,
     }
-    if reference:
-        span_days = max((latest_day - reference[0]).days, 1)
-        delta = latest_kg - reference[1]
-        trend["delta_kg"] = round(delta, 1)
-        trend["reference_days_ago"] = span_days
-        trend["rate_pct_per_week"] = round((delta / reference[1]) / span_days * 7 * 100, 2)
+
+    if len(window) >= 2:
+        xs = [-(now - d).days for d, _ in window]     # days relative to now (<=0)
+        ys = [kg for _, kg in window]
+        slope, intercept = _theil_sen(xs, ys)          # kg per day
+        if slope is not None:
+            trend_now = intercept                      # fitted value at now
+            span = max(xs) - min(xs)                    # don't extrapolate past the data
+            horizon = min(horizon_days, span) or horizon_days
+            delta = slope * horizon
+            trend["latest_kg"] = round(trend_now, 1)   # de-noised current weight
+            trend["delta_kg"] = round(delta, 1)
+            trend["reference_days_ago"] = horizon
+            if trend_now:
+                trend["rate_pct_per_week"] = round(slope * 7 / trend_now * 100, 2)
     return trend
 
 

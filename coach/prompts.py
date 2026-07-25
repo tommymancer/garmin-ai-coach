@@ -98,6 +98,14 @@ def chat_prompt(user_message: str, context: dict, history: list,
 Reply in {config.language}. Keep it short enough for a chat message
 (max ~8 lines) and avoid heavy markdown.
 
+GROUND YOUR ANSWER IN WHAT THE ATHLETE ACTUALLY DID. Before giving advice, read
+`recent_activities` below and note what they trained in the last few days. The
+plan is a template, not reality — never prescribe a session they have already
+done (if the last activity is a long bike, don't tell them to do the long bike),
+and refer to their real recent sessions, not just the plan. If the data seems to
+contradict what they're telling you, trust the data but say so, and suggest they
+send "refresh" if it might be out of date.
+
 {_context_block()}
 CURRENT GARMIN DATA (JSON):
 {json.dumps(context, ensure_ascii=False, indent=2, default=str)}
