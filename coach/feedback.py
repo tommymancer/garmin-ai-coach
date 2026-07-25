@@ -13,7 +13,7 @@ from . import garmin, llm, telegram
 from .config import config
 from .load_model import compute_metrics, summarize_activity
 from .prompts import feedback_prompt
-from .store import load_state, save_state
+from .store import load_state, save_state, write_snapshot
 
 logging.basicConfig(
     level=logging.INFO,
@@ -93,6 +93,10 @@ def main() -> None:
         logger.info("no activities returned")
         return
 
+    # Publish the fresh fetch so the chat daemon reads the same data (no desync).
+    weighins = garmin.fetch_weighins(client)
+    write_snapshot(activities, weighins)
+
     # First run: record a baseline so we don't blast messages for old workouts.
     if not state.get("initialized"):
         newest = max(activities, key=lambda a: a.get("startTimeLocal") or "")
@@ -109,7 +113,6 @@ def main() -> None:
         logger.info("nothing new")
         return
 
-    weighins = garmin.fetch_weighins(client)
     metrics = compute_metrics(activities, weighins)
 
     for activity in fresh:

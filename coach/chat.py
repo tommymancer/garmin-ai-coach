@@ -15,7 +15,7 @@ import logging
 import time
 from datetime import datetime
 
-from . import garmin, llm, telegram
+from . import garmin, llm, store, telegram
 from .config import config
 from .load_model import compute_metrics, summarize_activity
 from .prompts import chat_prompt
@@ -52,14 +52,14 @@ def is_refresh_command(text: str) -> bool:
 
 
 class GarminSnapshot:
-    """Keeps one Garmin session alive and caches data to avoid rate limits."""
+    """Serves Garmin data for the chat, preferring the shared snapshot the
+    feedback poller writes (so chat and feedback never disagree). Only hits
+    Garmin itself when the shared snapshot is missing or stale."""
 
     def __init__(self):
         self._client = None
-        self._data = None
-        self._fetched_at = 0.0
 
-    def _build(self) -> dict:
+    def _fetch_from_garmin(self):
         if self._client is None:
             self._client = garmin.connect()
         try:
@@ -69,18 +69,16 @@ class GarminSnapshot:
             self._client = garmin.connect()
             activities = garmin.fetch_activities(self._client)
         weighins = garmin.fetch_weighins(self._client)
+        store.write_snapshot(activities, weighins)   # keep the shared view fresh
+        return activities, weighins
+
+    def get(self, force: bool = False) -> dict:
+        shared = None if force else store.read_snapshot(config.snapshot_ttl)
+        activities, weighins = shared if shared else self._fetch_from_garmin()
         return {
             "overview": compute_metrics(activities, weighins),
             "recent_activities": [summarize_activity(a) for a in activities[:10]],
         }
-
-    def get(self, force: bool = False) -> dict:
-        now = time.time()
-        if not force and self._data and now - self._fetched_at < config.snapshot_ttl:
-            return self._data
-        self._data = self._build()
-        self._fetched_at = now
-        return self._data
 
 
 def handle_update(update: dict, snapshot: GarminSnapshot) -> None:

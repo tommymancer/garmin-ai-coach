@@ -6,7 +6,9 @@ All of it lives in COACH_DATA_DIR as plain files you can read and edit.
 """
 
 import json
+import os
 import re
+import time
 from datetime import datetime
 
 from .config import config
@@ -22,6 +24,36 @@ def load_state() -> dict:
 
 def save_state(state: dict) -> None:
     config.state_file.write_text(json.dumps(state, indent=2, default=str))
+
+
+# --- shared Garmin snapshot ------------------------------------------------
+# The feedback poller and the chat daemon are separate processes. The poller
+# fetches Garmin every run (to detect new activities) and writes the raw result
+# here; the chat reads it. So right after a feedback fires, the chat reflects
+# exactly the same data — no "ACWR 1.5 in the message, 1.19 in chat" desync —
+# and the chat rarely has to hit Garmin itself.
+def _snapshot_path():
+    return config.data_dir / "snapshot.json"
+
+
+def write_snapshot(activities: list, weighins: list) -> None:
+    payload = {"fetched_at": time.time(), "activities": activities, "weighins": weighins}
+    path = _snapshot_path()
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, default=str))
+    os.replace(tmp, path)          # atomic: readers never see a half-written file
+
+
+def read_snapshot(max_age_seconds: float):
+    """Return (activities, weighins) if a snapshot exists and is fresh enough,
+    else None so the caller fetches its own."""
+    try:
+        data = json.loads(_snapshot_path().read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    if time.time() - data.get("fetched_at", 0) > max_age_seconds:
+        return None
+    return data.get("activities"), data.get("weighins")
 
 
 # --- chat polling offset ---------------------------------------------------
