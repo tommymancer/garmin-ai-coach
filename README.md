@@ -59,8 +59,15 @@ and testable — and the LLM can't hallucinate your ACWR.
   flat until a workout drops out of the 7-day window and then falls off a cliff;
   an exponentially weighted average decays a little each rest day, which matches
   how fatigue actually fades. Bands: 🟢 0.8–1.3 · 🟡 1.3–1.5 · 🔴 >1.5 · ⚪ <0.8.
-- **80/20 split** (Seiler): sessions are classified easy vs hard from Garmin's
-  training-effect labels and values; the coach nudges you back toward ~80% easy.
+- **80/20 split by time in zone** (Seiler): easy vs hard is measured from the
+  *time you actually spent in each heart-rate zone*, not a per-session label —
+  the share of the week in zones 1-2 versus total time (Garmin's own
+  `hrTimeInZone` data, already in the activity summary, so no extra API calls).
+  This matters: Garmin labels a long steady ride "tempo" because aerobic
+  Training Effect grows with duration, so a 90-minute bike that was 72% in
+  zones 1-2 would otherwise be miscounted as a hard session. Measured by time,
+  it counts as the easy volume it really was. The coach nudges you toward ~80%
+  easy — and will tell you when you're stuck in the grey zone (too much zone 3).
 - **Zone 2 ceiling** is estimated from *your own* easy sessions, not a formula.
 - **Weight lens**: weekly calorie burn, active days, and weight/body-fat trend.
   Target ~0.5–1% bodyweight per week.
