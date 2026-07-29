@@ -33,7 +33,10 @@ RUN = {"running", "treadmill_running", "trail_running", "track_running",
        "virtual_run", "indoor_running", "obstacle_run"}
 SWIM = {"lap_swimming", "open_water_swimming", "swimming"}
 
-HARD_LABELS = {"TEMPO", "THRESHOLD", "LACTATE_THRESHOLD", "VO2MAX",
+# Labels that mean genuine intensity regardless of duration. TEMPO is
+# deliberately NOT here: a long steady ride accumulates a big aerobic Training
+# Effect and gets labelled TEMPO purely because of its length, not its effort.
+HARD_LABELS = {"THRESHOLD", "LACTATE_THRESHOLD", "VO2MAX",
                "ANAEROBIC_CAPACITY", "ANAEROBIC", "OVERREACHING"}
 
 
@@ -66,14 +69,33 @@ def parse_start(activity: dict):
     return None
 
 
-def is_hard(activity: dict) -> bool:
-    """Classify a session as hard (quality) vs easy (aerobic/recovery)."""
+def _zone_seconds(activity: dict):
+    """Seconds spent in HR zones 1-5, straight from Garmin's activity summary."""
+    return [_num(activity.get(f"hrTimeInZone_{z}")) for z in range(1, 6)]
+
+
+def _intense_by_label(activity: dict) -> bool:
+    """Fallback intensity signal for activities with no HR-zone data."""
     label = (activity.get("trainingEffectLabel") or "").upper()
-    return (
-        label in HARD_LABELS
-        or _num(activity.get("anaerobicTrainingEffect")) >= 1.5
-        or _num(activity.get("aerobicTrainingEffect")) >= 4.0
-    )
+    return label in HARD_LABELS or _num(activity.get("anaerobicTrainingEffect")) >= 1.5
+
+
+def is_hard(activity: dict) -> bool:
+    """
+    Hard (quality) vs easy (aerobic/recovery) — by TIME IN ZONE, not the label.
+
+    The old rule counted any session with aerobic Training Effect >= 4.0 as
+    hard, but that figure grows with duration, so a long easy zone-2 ride got
+    flagged hard. A session is hard when it actually spent time up high: a
+    meaningful chunk in zone 4-5, or most of it above zone 2.
+    """
+    zones = _zone_seconds(activity)
+    total = sum(zones)
+    if total > 0:
+        vigorous = (zones[3] + zones[4]) / total          # zone 4-5
+        moderate_plus = (zones[2] + zones[3] + zones[4]) / total   # zone 3+
+        return vigorous >= 0.15 or moderate_plus >= 0.5
+    return _intense_by_label(activity)   # no zone data → fall back to labels
 
 
 def summarize_activity(activity: dict) -> dict:
@@ -259,18 +281,25 @@ def compute_metrics(activities, weighins, now=None) -> dict:
     acute_weekly = round(acute_daily * 7) if acute_daily is not None else round(load_7d)
     chronic_weekly = round(chronic_daily * 7) if chronic_daily is not None else 0
 
-    easy_load = sum(_num(a.get("activityTrainingLoad")) for a in last_7d if not is_hard(a))
-    easy_share = round(easy_load / load_7d, 2) if load_7d > 0 else None
+    # Easy share = TIME in zones 1-2 / total time, summed across the week
+    # (the athlete's real 80/20 balance), not a per-session easy/hard label.
+    # Activities with no HR-zone data (some swims, non-HR sports) are skipped.
+    easy_seconds = total_seconds = 0.0
+    for a in last_7d:
+        zones = _zone_seconds(a)
+        if sum(zones) <= 0:
+            continue
+        easy_seconds += zones[0] + zones[1]
+        total_seconds += sum(zones)
+    easy_share = round(easy_seconds / total_seconds, 2) if total_seconds > 0 else None
 
-    # Estimate the top of zone 2 from the athlete's own easy sessions
-    easy_hrs = sorted(
+    # Zone-2 HR ceiling, only for phrasing "keep it under X bpm" in advice.
+    # Median easy-session HR (robust) lifted ~6% to the top of zone 2.
+    easy_hrs = [
         _num(a.get("averageHR")) for a in last_28d
         if not is_hard(a) and _num(a.get("averageHR")) > 0
-    )
-    zone2_hr_ceiling = (
-        round(easy_hrs[min(len(easy_hrs) - 1, int(0.75 * len(easy_hrs)))])
-        if easy_hrs else None
-    )
+    ]
+    zone2_hr_ceiling = round(_median(easy_hrs) * 1.06) if easy_hrs else None
 
     active_days_7d = len({parse_start(a).date() for a in last_7d if parse_start(a)})
     calories_7d = round(sum(_num(a.get("calories")) for a in last_7d))

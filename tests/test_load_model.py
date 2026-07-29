@@ -20,14 +20,18 @@ NOW = datetime(2026, 6, 15, 12, 0, 0)
 
 
 def activity(days_ago, load, sport="road_biking", calories=500,
-             avg_hr=130, aerobic_te=3.0, anaerobic_te=0.0, label="AEROBIC_BASE"):
+             avg_hr=130, aerobic_te=3.0, anaerobic_te=0.0, label="AEROBIC_BASE",
+             zones=None):
+    """`zones` = seconds in HR zones (Z1..Z5). Defaults to a mostly-easy hour."""
     start = NOW - timedelta(days=days_ago)
-    return {
+    if zones is None:
+        zones = (600, 2400, 600, 0, 0)     # 1h, 83% in zones 1-2
+    a = {
         "activityId": f"a{days_ago}-{sport}",
         "activityName": "Test",
         "activityType": {"typeKey": sport},
         "startTimeLocal": start.strftime("%Y-%m-%d %H:%M:%S"),
-        "duration": 3600.0,
+        "duration": float(sum(zones)) or 3600.0,
         "distance": 20000.0,
         "calories": calories,
         "averageHR": avg_hr,
@@ -37,6 +41,9 @@ def activity(days_ago, load, sport="road_biking", calories=500,
         "anaerobicTrainingEffect": anaerobic_te,
         "trainingEffectLabel": label,
     }
+    for i, sec in enumerate(zones, start=1):
+        a[f"hrTimeInZone_{i}"] = sec
+    return a
 
 
 def test_sport_bucket_maps_garmin_type_keys():
@@ -46,11 +53,34 @@ def test_sport_bucket_maps_garmin_type_keys():
     assert sport_bucket("rowing") == "other"
 
 
-def test_is_hard_detects_intensity_three_ways():
-    assert is_hard(activity(1, 100, label="VO2MAX"))
-    assert is_hard(activity(1, 100, label="AEROBIC_BASE", anaerobic_te=2.0))
-    assert is_hard(activity(1, 100, label="AEROBIC_BASE", aerobic_te=4.5))
-    assert not is_hard(activity(1, 100, label="RECOVERY"))
+def test_is_hard_uses_time_in_zone_not_labels():
+    # real vigorous work (time in zones 4-5) -> hard
+    assert is_hard(activity(1, 100, zones=(120, 300, 600, 900, 400)))
+    # the real ride: labelled TEMPO but 72% in zones 1-2, 1% in zone 4 -> NOT hard
+    assert not is_hard(activity(1, 122, label="TEMPO",
+                                zones=(582, 3633, 1559, 64, 0)))
+    # mostly recovery -> not hard
+    assert not is_hard(activity(1, 40, zones=(1800, 600, 0, 0, 0)))
+    # no HR-zone data -> fall back to the label
+    assert is_hard(activity(1, 100, label="VO2MAX", zones=()))
+
+
+def test_easy_share_is_time_in_zone_not_session_labels():
+    # The exact bike from real use: TEMPO label, but 72% of time in zones 1-2.
+    real_bike = activity(1, 122, sport="road_biking", label="TEMPO",
+                         aerobic_te=4.5, zones=(582, 3633, 1559, 64, 0))
+    m = compute_metrics([real_bike], [], now=NOW)
+    assert m["easy_share"] == 0.72, m["easy_share"]  # (582+3633)/5838
+
+
+def test_easy_share_sums_time_across_the_week():
+    activities = [
+        activity(1, 200, zones=(0, 600, 1800, 1200, 0)),      # hard-ish ride
+        activity(3, 80, zones=(1200, 1800, 0, 0, 0)),         # easy
+    ]
+    m = compute_metrics(activities, [], now=NOW)
+    # easy time (Z1+Z2) = 600 + 3000 = 3600; total = 3600 + 3000 = 6600
+    assert m["easy_share"] == round(3600 / 6600, 2)
 
 
 def test_acwr_status_bands():
@@ -80,16 +110,17 @@ def test_steady_training_lands_in_the_optimal_band():
     assert 0.8 <= acwr <= 1.3, f"steady load should be optimal, got {acwr}"
 
 
-def test_metrics_sport_split_and_easy_share():
+def test_metrics_sport_split_and_time():
     activities = [
-        activity(1, 200, sport="road_biking", label="TEMPO", aerobic_te=4.2),  # hard
-        activity(3, 50, sport="lap_swimming", label="RECOVERY", aerobic_te=2.0),
-        activity(5, 50, sport="running", label="AEROBIC_BASE", aerobic_te=3.0),
+        activity(1, 200, sport="road_biking", zones=(0, 900, 1800, 900, 0)),
+        activity(3, 50, sport="lap_swimming", zones=(600, 1200, 0, 0, 0)),
+        activity(5, 50, sport="running", zones=(600, 1200, 0, 0, 0)),
     ]
     metrics = compute_metrics(activities, [], now=NOW)
 
-    assert metrics["sport_split_pct"]["bike"] == 67
-    assert metrics["easy_share"] == 0.33      # 100 easy of 300 total
+    assert metrics["sport_split_pct"]["bike"] == 67   # by load, unchanged
+    # easy time = 900 + 1800 + 1800 = 4500; total = 3600 + 1800 + 1800 = 7200
+    assert metrics["easy_share"] == round(4500 / 7200, 2)
     assert metrics["active_days_7d"] == 3
     assert metrics["calories_7d"] == 1500
 
